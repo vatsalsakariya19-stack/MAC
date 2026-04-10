@@ -1,0 +1,26 @@
+name: macOS Remote Desktop
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Set up ngrok
+        run: |
+          brew install --cask ngrok
+          ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      
+      - name: Enable Screen Sharing
+        run: |
+          sudo /usr/libexec/PlistBuddy -c "Set :com.apple.screensharing:Enabled bool true" /Library/Preferences/com.apple.RemoteManagement.plist
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
+      
+      - name: Set Password for VNC User
+        run: |
+          sudo dscl . -passwd /Users/runner ${{ secrets.VNC_PASSWORD }}
+          
+      - name: Start ngrok tunnel
+        run: |
+          ngrok tcp 5900 --region us &
+          sleep 10
+          curl --silent http://127.0.0 | jq -r '.tunnels[0].public_url'
